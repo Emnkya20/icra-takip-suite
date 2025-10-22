@@ -37,8 +37,8 @@ def create_user(payload: schemas.UserCreate, current=Depends(get_current_user), 
     require_roles(current, ["sys_admin"])
     if db.query(models.User).filter(models.User.email==payload.email).first():
         raise HTTPException(status_code=400, detail="Email mevcut")
-  pw = payload.password[:72]  # bcrypt sınırı için
-u = models.User(
+    pw = payload.password[:72]  # bcrypt sınırı için
+    u = models.User(
     email=payload.email,
     full_name=payload.full_name,
     password_hash=hash_password(pw),
