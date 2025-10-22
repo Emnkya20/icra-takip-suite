@@ -27,7 +27,10 @@ def verify_password(plain, hashed):
     return pwd_context.verify(plain, hashed)
 
 def hash_password(pw):
+    # bcrypt 72 byte sınırını aşmasın diye uzun şifreleri kesiyoruz
+    pw = pw[:72]
     return pwd_context.hash(pw)
+
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> models.User:
     credentials_exception = HTTPException(status_code=401, detail="Kimlik doğrulama başarısız")
