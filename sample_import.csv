@@ -1,0 +1,3 @@
+sequence_no,debtor_name,icra_dairesi,file_no,original_debt,status
+1,Ahmet Yilmaz,Ankara Icra,2025/1234,1299924.00,open
+2,Ayse Demir,Istanbul Icra,2025/5678,816900.00,open
