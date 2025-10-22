@@ -36,17 +36,44 @@ def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get
 def create_user(payload: schemas.UserCreate, current=Depends(get_current_user), db: Session = Depends(get_db)):
     require_roles(current, ["sys_admin"])
     if db.query(models.User).filter(models.User.email==payload.email).first():
-        raise HTTPException(status_code=400, detail="Email mevcut")
-    pw = payload.password[:72]  # bcrypt sınırı için
-    u = models.User(
-    email=payload.email,
-    full_name=payload.full_name,
-    password_hash=hash_password(pw),
-    role=payload.role
-)
+ @app.post("/users", response_model=schemas.UserOut)
+def create_user(payload: schemas.UserCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    existing_users = db.query(models.User).count()
 
-    db.add(u); db.commit(); db.refresh(u)
-    return {"id": str(u.id), "email": u.email, "full_name": u.full_name, "role": u.role}
+    # Eğer sistemde hiç kullanıcı yoksa (yani ilk kayıt yapılacaksa)
+    if existing_users == 0:
+        pw = payload.password[:72]  # bcrypt sınırı
+        u = models.User(
+            email=payload.email,
+            full_name=payload.full_name,
+            password_hash=hash_password(pw),
+            role=payload.role
+        )
+        db.add(u)
+        db.commit()
+        db.refresh(u)
+        return u
+
+    # Sonraki kullanıcılar için admin kontrolü
+    if not current_user or current_user.role != "sys_admin":
+        raise HTTPException(status_code=403, detail="Yalnızca admin kullanıcı ekleyebilir")
+
+    # E-posta zaten varsa hata döndür
+    if db.query(models.User).filter(models.User.email == payload.email).first():
+        raise HTTPException(status_code=400, detail="Email mevcut")
+
+    pw = payload.password[:72]
+    u = models.User(
+        email=payload.email,
+        full_name=payload.full_name,
+        password_hash=hash_password(pw),
+        role=payload.role
+    )
+    db.add(u)
+    db.commit()
+    db.refresh(u)
+    return u
+
 
 @app.get("/dashboard/summary")
 def dashboard_summary(current=Depends(get_current_user), db: Session = Depends(get_db)):
