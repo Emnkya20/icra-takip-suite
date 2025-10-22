@@ -33,9 +33,41 @@ def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get
     return {"access_token": token}
 
 @app.post("/users", response_model=schemas.UserOut)
-def create_user(payload: schemas.UserCreate, current=Depends(get_current_user), db: Session = Depends(get_db)):
-    require_roles(current, ["sys_admin"])
-    if db.query(models.User).filter(models.User.email==payload.email).first():
+def create_user(payload: schemas.UserCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    existing_users = db.query(models.User).count()
+
+    # Eğer sistemde hiç kullanıcı yoksa (ilk kayıt)
+    if existing_users == 0:
+        pw = payload.password[:72]
+        u = models.User(
+            email=payload.email,
+            full_name=payload.full_name,
+            password_hash=hash_password(pw),
+            role=payload.role
+        )
+        db.add(u)
+        db.commit()
+        db.refresh(u)
+        return u
+
+    # Diğer durumlarda admin kontrolü
+    require_roles(current_user, ["sys_admin"])
+
+    if db.query(models.User).filter(models.User.email == payload.email).first():
+        raise HTTPException(status_code=400, detail="Email mevcut")
+
+    pw = payload.password[:72]
+    u = models.User(
+        email=payload.email,
+        full_name=payload.full_name,
+        password_hash=hash_password(pw),
+        role=payload.role
+    )
+    db.add(u)
+    db.commit()
+    db.refresh(u)
+    return u
+
  @app.post("/users", response_model=schemas.UserOut)
 def create_user(payload: schemas.UserCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     existing_users = db.query(models.User).count()
