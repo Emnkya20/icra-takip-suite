@@ -37,7 +37,14 @@ def create_user(payload: schemas.UserCreate, current=Depends(get_current_user), 
     require_roles(current, ["sys_admin"])
     if db.query(models.User).filter(models.User.email==payload.email).first():
         raise HTTPException(status_code=400, detail="Email mevcut")
-    u = models.User(email=payload.email, full_name=payload.full_name, password_hash=hash_password(payload.password), role=payload.role)
+  pw = payload.password[:72]  # bcrypt sınırı için
+u = models.User(
+    email=payload.email,
+    full_name=payload.full_name,
+    password_hash=hash_password(pw),
+    role=payload.role
+)
+
     db.add(u); db.commit(); db.refresh(u)
     return {"id": str(u.id), "email": u.email, "full_name": u.full_name, "role": u.role}
 
