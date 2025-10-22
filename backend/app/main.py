@@ -33,7 +33,8 @@ def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get
     return {"access_token": token}
 
 @app.post("/users", response_model=schemas.UserOut)
-def create_user(payload: schemas.UserCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+def create_user(payload: schemas.UserCreate, db: Session = Depends(get_db), current_user: models.User = None):
+
     existing_users = db.query(models.User).count()
 
     # Eğer sistemde hiç kullanıcı yoksa (yani ilk kayıt yapılacaksa)
